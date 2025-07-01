@@ -17,21 +17,30 @@ const findAll = () => {
  * @returns {{title: string, completed: boolean, id: number}}
  */
 const findById = (id) => {
-    return todos.find(todo => todo.id === parseInt(id));
+    return todos.find(todo => todo.id.toString() === id);
 }
 
 /**
  * 
- * @param {object} data
- * @returns {object}
+ * @param {{title: string, completed: boolean}} data 
+ * @returns {Promise<{title: string, completed: boolean, id: number}>}
  */
-const save = async (data) => {
-    if (todos.find(todo => todo.id === data.id)) {
-        const updatedTodos = todos.map(todo => (todo.id !== data.id ? todo : data));
-        return fs.writeFile(path, JSON.stringify({ data: [...updatedTodos] }));
-    } else { // Create if not existed
-        return fs.writeFile(path, JSON.stringify({ data: [...todos, data] }));
-    }
+const add = async (data) => {
+    const lastElementId = todos[todos.length - 1].id || 0;
+    const newData = {...data, id: lastElementId + 1};
+    await fs.writeFile(path, JSON.stringify({ data: [...todos, newData] }));
+    return newData;
+}
+
+/**
+ * 
+ * @param {{title: string, completed: boolean, id: number}} data 
+ * @returns {Promise<{title: string, completed: boolean, id: number}>}
+ */
+const update = async (data) => {
+    const updatedTodos = todos.map(todo => (todo.id !== data.id ? todo : data));
+    await fs.writeFile(path, JSON.stringify({ data: [...updatedTodos] }));
+    return data;
 }
 
 /**
@@ -39,13 +48,13 @@ const save = async (data) => {
  * @param {number} id 
  */
 const deleteById = async (id) => {
-   return fs.writeFile(path, JSON.stringify({ data: todos.filter(todo => todo.id !== parseInt(id)) }));
+    await fs.writeFile(path, JSON.stringify({ data: todos.filter(todo => todo.id !== parseInt(id)) }));
 }
 
 /**
  * 
  * @param {number} id 
- * @returns true || false
+ * @returns {true | false}
  */
 const isExisted = (id) => {
     return todos.some(todo => todo.id === parseInt(id));
@@ -54,33 +63,31 @@ const isExisted = (id) => {
 /**
  * 
  * @param {[{title: string, completed: boolean, id: number}, {title: string, completed: boolean, id: number}]} data 
- * @returns
+ * @returns {Promise<[{title: string, completed: boolean, id: number}, {title: string, completed: boolean, id: number}]>}
  */
-const saveMany = async (data) => {
-    const updatedTodos = todos.map(t => data.find(d => d.id === t.id) || t);
-
-    return fs.writeFile(path, JSON.stringify({ data: [...updatedTodos] }));
+const updateMany = async (data) => {
+    const dataMap = new Map(data.map(todo => [todo.id, todo]))
+    const updatedTodos = todos.map(todo => dataMap.get(todo.id) || todo);
+    await fs.writeFile(path, JSON.stringify({ data: [...updatedTodos] }));
+    return updatedTodos;
 }
 
 /**
  * 
  * @param {[number]} data 
- * @returns 
  */
 const deleteMany = async (data) => {
-    console.log(data);
-    
     const updatedTodos = todos.filter(t => !data?.includes(parseInt(t.id)));
-
-    return fs.writeFile(path, JSON.stringify({ data: [...updatedTodos] }));
+    fs.writeFile(path, JSON.stringify({ data: [...updatedTodos] }));
 }
 
 module.exports = {
     findAll,
     findById,
-    save,
+    add,
+    update,
     deleteById,
     isExisted,
-    saveMany,
+    updateMany,
     deleteMany
 };
